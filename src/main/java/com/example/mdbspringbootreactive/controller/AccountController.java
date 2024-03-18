@@ -10,6 +10,8 @@ import com.example.mdbspringbootreactive.model.Txn;
 import com.example.mdbspringbootreactive.model.TxnEntry;
 import com.example.mdbspringbootreactive.repository.AccountRepository;
 import com.example.mdbspringbootreactive.service.TxnService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +22,7 @@ import java.util.Map;
 @RestController
 public class AccountController {
 
+    private final static Logger LOGGER = LoggerFactory.getLogger(AccountController.class);
     private final AccountRepository accountRepository;
     private final TxnService txnService;
 
@@ -28,18 +31,26 @@ public class AccountController {
         this.txnService = txnService;
     }
 
+    private static void printLastLineStackTrace(String context) {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        LOGGER.info("Stack trace's last line: " + stackTrace[stackTrace.length - 1].toString() + " from " + context);
+    }
+
     @PostMapping("/account")
     public Mono<Account> createAccount(@RequestBody Account account) {
+        printLastLineStackTrace("POST /account");
         return accountRepository.save(account);
     }
 
     @GetMapping("/account/{accountNum}")
     public Mono<Account> getAccount(@PathVariable String accountNum) {
+        printLastLineStackTrace("GET /account/" + accountNum);
         return accountRepository.findByAccountNum(accountNum).switchIfEmpty(Mono.error(new AccountNotFoundException()));
     }
 
     @PostMapping("/account/{accountNum}/debit")
     public Mono<Txn> debitAccount(@PathVariable String accountNum, @RequestBody Map<String, Object> requestBody) {
+        printLastLineStackTrace("POST /account/" + accountNum + "/debit");
         Txn txn = new Txn();
         double amount = ((Number) requestBody.get("amount")).doubleValue();
         txn.addEntry(new TxnEntry(accountNum, amount));
@@ -48,6 +59,7 @@ public class AccountController {
 
     @PostMapping("/account/{accountNum}/credit")
     public Mono<Txn> creditAccount(@PathVariable String accountNum, @RequestBody Map<String, Object> requestBody) {
+        printLastLineStackTrace("POST /account/" + accountNum + "/credit");
         Txn txn = new Txn();
         double amount = ((Number) requestBody.get("amount")).doubleValue();
         txn.addEntry(new TxnEntry(accountNum, -amount));
@@ -56,6 +68,7 @@ public class AccountController {
 
     @PostMapping("/account/{from}/transfer")
     public Mono<Txn> transfer(@PathVariable String from, @RequestBody TransferRequest transferRequest) {
+        printLastLineStackTrace("POST /account/" + from + "/transfer");
         String to = transferRequest.getTo();
         double amount = ((Number) transferRequest.getAmount()).doubleValue();
         Txn txn = new Txn();
